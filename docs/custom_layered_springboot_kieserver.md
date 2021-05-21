@@ -97,8 +97,8 @@ Finally, once we have the configuration of the `pom.xml` and `layers.xml` set up
 foo@bar:~$ mvn clean package -DskipTests
 ```
 
-## From layers to Dockerfile
-We can inspect the result of this layering process using the property `jarmode=layertools` with the `list` argument for the generated fat-jar:
+## Layers inspect
+We can check out the result of this layering process using the property `jarmode=layertools` with the `list` argument for the generated fat-jar:
 
 ```console
 foo@bar:~$ java -Djarmode=layertools -jar target/immutable-springboot-kie-server-1.0.0.jar list
@@ -109,6 +109,25 @@ application
 kjars
 ```
 Our custom `kjars` layer is the last one as we defined in the `layerOrder` node of `layers.xml` file.
+
+Another interesting file we may check out is the `layers.idx` where packaging information (separated folders and layer order) is stored.
+```console
+foo@bar:~$ cat application/BOOT-INF/layers.idx 
+- "dependencies":
+  - "BOOT-INF/lib/"
+- "spring-boot-loader":
+  - "org/"
+- "snapshot-dependencies":
+- "application":
+  - "BOOT-INF/classes/application.properties"
+  - "BOOT-INF/classes/org/"
+  - "BOOT-INF/classes/quartz-db.properties"
+  - "BOOT-INF/classpath.idx"
+  - "BOOT-INF/layers.idx"
+  - "META-INF/"
+- "kjars":
+  - "BOOT-INF/classes/KIE-INF/"
+```
 
 Moreover, we can extract the layers again using the property `jarmode=layertools` with the `extract` argument for the generated fat-jar:
 
@@ -129,24 +148,24 @@ kjars
 
 This utility will be used in the Dockerfile for easily extracting the layers of the fat-jar and _dockerize_ our immutable Spring Boot Kie Server.
 
-Another interesting file we may check is the `layers.idx` where packaging information (split folders and order) is stored.
-```console
-foo@bar:~$ cat application/BOOT-INF/layers.idx 
-- "dependencies":
-  - "BOOT-INF/lib/"
-- "spring-boot-loader":
-  - "org/"
-- "snapshot-dependencies":
-- "application":
-  - "BOOT-INF/classes/application.properties"
-  - "BOOT-INF/classes/org/"
-  - "BOOT-INF/classes/quartz-db.properties"
-  - "BOOT-INF/classpath.idx"
-  - "BOOT-INF/layers.idx"
-  - "META-INF/"
-- "kjars":
-  - "BOOT-INF/classes/KIE-INF/"
+## Layered Dockerfile
+A multi-stage dockerfile can be defined to take advantage of this layering and build the image:
+
+```dockerfile
+FROM openjdk:8-slim as builder
+WORKDIR application
+ARG JAR_FILE=target/*.jar
+COPY ${JAR_FILE} immutable-springboot-kie-server-1.0.0.jar
+RUN java -Djarmode=layertools -jar immutable-springboot-kie-server-1.0.0.jar extract
+
+FROM openjdk:8-slim
+WORKDIR application
+COPY --from=builder application/dependencies/ ./
+COPY --from=builder application/spring-boot-loader/ ./
+COPY --from=builder application/snapshot-dependencies/ ./
+COPY --from=builder application/application/ ./
+COPY --from=builder application/kjars/ ./
+ENTRYPOINT ["java", "org.springframework.boot.loader.JarLauncher"]
 ```
 
-
-
+Happy layering!!
