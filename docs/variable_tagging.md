@@ -1,6 +1,5 @@
 ---
 title: 'jBPM variable tagging'
-layout: page
 permalink: /jbpm-variable-tagging/
 categories:
   - jbpm
