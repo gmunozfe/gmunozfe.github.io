@@ -1,3 +1,11 @@
+---
+title: 'jBPM variable tagging'
+layout: post
+permalink: /jbpm-variable-tagging/
+categories:
+  - jbpm
+---
+
 # jBPM variable tagging
 
 Variable tagging allows developers to hint jBPM for extra behavior to a specific process variable. Tags can be used by process or case instances. Tags are simple String values that are added as metadata to a specific variable. A process/case instance variable can have multiple tags associated with it.
