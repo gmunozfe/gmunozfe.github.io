@@ -1,26 +1,32 @@
 ---
-title: 'Custom Layered Immutable Springboot Kie Server'
+title: 'Custom Layered Immutable Spring Boot Kie Server'
 permalink: /custom-layered-springboot-kieserver/
 categories:
   - kie-server
   - springboot
 ---
 
-# Custom Layered Immutable Springboot Kie Server
+# Custom Layered Immutable Spring Boot Kie Server
 
-When creating an image for immutable Springboot Kie Server, it is possible to split up the files and folders belonging to the fat-jar into different layers.
+When creating an image for immutable Spring Boot Kie Server, it is possible to split up the files and folders belonging to the fat-jar into different layers.
 
 Main advantages of this approach are:
 
-1. Layers are downloaded once (saving bandwith), and can be reused for other images.
+1. Layers are downloaded once (saving disk space and bandwith) and can be reused for other images.
 2. Libraries, code and resources are grouped into layers based on the likelihood to change between builds. This reduces the image generation time.
 3. Execution over the unzipped classes is a little bit faster than launching the fat-jar (_java -jar app.jar_)
 
-Considering all these points, it has sense to layer the immutable Springboot Kie Server -isolating the KJARs into a new custom layer- because business assets in KJARs are more likely to change.
+Considering all these points, it has sense to layer the immutable Spring Boot Kie Server -isolating the KJARs into a new custom layer- because business assets in KJARs are more likely to change.
 
 ## Packaging with layers
+The `spring-boot-maven-plugin` is in charge of creating the immutable fat-jar containing all the KJAR files and their dependencies. For triggering this process, it is needed to add the following properties to the Spring Boot `application.properties` file:
 
+```editor-config
+kieserver.classPathContainer=true
+kieserver.autoScanDeployments=true
+```
 
+Next, we have to enable the `layers` into the configuration, pointing out to the configuration file `layers.xml` where it is defined how the folders, files and resources are separated into different layers and the order of them (this is important because determines how layers are can be cached and reused).
 
 ```xml
 <plugin>
@@ -46,6 +52,13 @@ Considering all these points, it has sense to layer the immutable Springboot Kie
 </plugin>
 ```
 
+In this `layers.xml` file, following layers will be defined in this order (first four are default ones adding custom kjars layer at the end, as it is the more likely to be changed during application lifetime):
+
+* `dependencies` for any dependency whose version does not contain SNAPSHOT.
+* `spring-boot-loader`for the loader classes.
+* `snapshot-dependencies` for any dependency whose version contains SNAPSHOT.
+* `application` for local module dependencies, application classes, and resources but KJARs.
+* `kjars` for all the KJARs in the `BOOT-INF/classes/KIE-INF` folder, which were separated during `package-dependencies-kjar` goal execution. 
 
 ```xml
 <layers xmlns="http://www.springframework.org/schema/boot/layers"
@@ -79,10 +92,13 @@ Considering all these points, it has sense to layer the immutable Springboot Kie
 </layers>
 ```
 
-
+Finally, once we have the configuration of the `pom.xml` and `layers.xml` set up, we may launch the package process by invoking to the maven command:
 ```console
 foo@bar:~$ mvn clean package -DskipTests
 ```
+
+## From layers to Dockerfile
+We can inspect the result of this layering process using the property `jarmode=layertools` with the `list` argument for the generated fat-jar:
 
 ```console
 foo@bar:~$ java -Djarmode=layertools -jar target/immutable-springboot-kie-server-1.0.0.jar list
@@ -92,6 +108,9 @@ snapshot-dependencies
 application
 kjars
 ```
+Our custom `kjars` layer is the last one as we defined in the `layerOrder` node of `layers.xml` file.
+
+Moreover, we can extract the layers again using the property `jarmode=layertools` with the `extract` argument for the generated fat-jar:
 
 ```console
 foo@bar:~$ java -Djarmode=layertools -jar target/immutable-springboot-kie-server-1.0.0.jar extract
@@ -106,9 +125,11 @@ kjars
                 └── other-kjar-1.0.0.jar
 
 4 directories, 3 files
-
 ```
 
+This utility will be used in the Dockerfile for easily extracting the layers of the fat-jar and _dockerize_ our immutable Spring Boot Kie Server.
+
+Another interesting file we may check is the `layers.idx` where packaging information (split folders and order) is stored.
 ```console
 foo@bar:~$ cat application/BOOT-INF/layers.idx 
 - "dependencies":
@@ -129,4 +150,3 @@ foo@bar:~$ cat application/BOOT-INF/layers.idx
 
 
 
-Custom tags may be also added to the process or case by means of Business Central, introducing a non-predefined value for the target variable. 
