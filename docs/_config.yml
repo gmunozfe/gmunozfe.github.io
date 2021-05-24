@@ -1,8 +1,8 @@
-theme: jekyll-theme-midnight
+theme: jekyll-theme-cayman
 
 # Site title and subtitle. This is used in _includes/header.html
-title: 'barking up the right tree'
-subtitle: 'coding & testing pills to share'
+title: 'barking up the _right_ tree'
+description: 'coding & testing pills to share'
 
 # if you wish to integrate disqus on pages set your shortname here
 disqus_shortname: ''
