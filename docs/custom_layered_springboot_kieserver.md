@@ -26,7 +26,7 @@ kieserver.classPathContainer=true
 kieserver.autoScanDeployments=true
 ```
 
-Next, we have to enable the `layers` into the `pom.xml`, pointing out to the configuration file `layers.xml` where it is defined how the folders, files and resources are separated into different layers and the order of them (this is important because determines how layers are can be cached and reused).
+Next, we have to enable the `layers` into the `pom.xml`, pointing out to the configuration file `layers.xml` where it is defined how the folders, files and resources are separated into different layers and the order of them (this is important because determines how layers can be cached and reused).
 
 ```xml
 <plugin>
@@ -52,7 +52,7 @@ Next, we have to enable the `layers` into the `pom.xml`, pointing out to the con
 </plugin>
 ```
 
-In this `layers.xml` file, following layers will be defined in this order (first four are default ones adding custom kjars layer at the end, as it is the more likely to be changed during application lifetime):
+In this `layers.xml` file, following layers will be defined in this order (first four are default ones, adding custom `kjars` layer at the end, as it is the more likely to be changed during application lifetime):
 
 * `dependencies` for any dependency whose version does not contain SNAPSHOT.
 * `spring-boot-loader`for the loader classes.
